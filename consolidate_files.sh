@@ -30,7 +30,44 @@ append_file_content() {
 export -f append_file_content
 export OUTFILE
 
-# Find all files in the directory and process them
-find "$DIR" -type f -exec bash -c 'append_file_content "$0"' {} \;
+# Recursive function to process directories
+process_directory() {
+    local current_dir="$1"
+    local gitignore="$current_dir/.gitignore"
+    local find_params=('-type' 'f') # Default parameter to find files
+
+    echo "Processing directory: $current_dir"
+
+    # Handle .gitignore if it exists in the current directory
+    if [ -f "$gitignore" ]; then
+        echo "Found .gitignore in $current_dir"
+        while IFS='' read -r line || [[ -n "$line" ]]; do
+            line=$(echo "$line" | tr -d '\r')  # Remove Windows carriage returns if any
+            [[ "$line" = "" || "$line" =~ ^#.*$ ]] && continue
+            echo "Reading line from .gitignore: '$line'"
+            if [[ "$line" == */ ]] || [[ ! "$line" == *.* ]]; then
+                # Treat as a directory
+                find_params+=('!' '-path' "${current_dir}/${line%/}/*" '-prune')
+                echo "Adding directory to exclude: '${current_dir}/${line%/}/*'"
+            else
+                # Treat as a file or file pattern
+                find_params+=('!' '-path' "${current_dir}/${line}")
+                echo "Adding file to exclude: '${current_dir}/${line}'"
+            fi
+        done < "$gitignore"
+    fi
+
+    # Display the find command to be executed
+    echo "find command: find $current_dir ${find_params[@]}"
+    
+    # Execute find, excluding specified patterns and directories
+    find "$current_dir" "${find_params[@]}" -exec bash -c 'append_file_content "$0"' {} \;
+}
+
+# Process the directory
+process_directory "$DIR"
 
 echo "All files have been processed into $OUTFILE."
+
+
+
