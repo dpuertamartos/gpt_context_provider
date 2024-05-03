@@ -21,8 +21,10 @@ fi
 
 # Function to append file content with header
 append_file_content() {
-    echo "# $1" >> "$OUTFILE" # Append the file path as a comment
+
+    echo "###%START_CONTENT PATH" $1 >> "$OUTFILE" # Append the file path as a comment
     cat "$1" >> "$OUTFILE"   # Append the file content
+    echo "###%END_CONTENT PATH" $1 >> "$OUTFILE"
     echo "" >> "$OUTFILE"    # Append a newline for separation
 }
 
@@ -35,6 +37,9 @@ process_directory() {
     local current_dir="$1"
     local gitignore="$current_dir/.gitignore"
     local find_params=('-type' 'f') # Default parameter to find files
+
+    # Exclude all files and directories starting with a dot
+    find_params+=('!' '-path' "${current_dir}/.*" '-prune')
 
     echo "Processing directory: $current_dir"
 
