@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Check if the correct number of arguments was provided
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <directory_to_explore> <output_file>"
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    echo "Usage: $0 <directory_to_explore> [output_file]"
     exit 1
 fi
 
 # Variables for directory and output file
 DIR="$1"
-OUTFILE="${2:-$(basename "$DIR").txt}"
+OUTFILE="${2:-gpt_context_output.txt}"  # Default output file name if not provided
 
 # Check if the directory exists
 if [ ! -d "$DIR" ]; then
@@ -21,9 +21,10 @@ fi
 
 # Function to append file content with header
 append_file_content() {
-    echo "###%START_CONTENT PATH" "$1" >> "$OUTFILE" # Append the file path as a comment
-    cat "$1" >> "$OUTFILE"   # Append the file content
-    echo "###%END_CONTENT PATH" "$1" >> "$OUTFILE"
+    local file="$1"
+    echo "###%START_CONTENT PATH $file" >> "$OUTFILE" # Append the file path as a comment
+    cat "$file" >> "$OUTFILE"   # Append the file content
+    echo "###%END_CONTENT PATH $file" >> "$OUTFILE"
     echo "" >> "$OUTFILE"    # Append a newline for separation
 }
 
@@ -70,8 +71,16 @@ process_directory() {
     # Add default parameter to find files
     find_params+=('-type' 'f')
 
-    # Exclude all files and directories starting with a dot
-    find_params+=('!' '-path' "${current_dir}/.*" '-prune')
+    # Exclude .git folder by default
+    find_params+=('!' '-path' "$current_dir/.git/*" '-prune')
+    echo "Adding .git directory to exclude (by default): '$current_dir/.git/*'"
+
+    # Exclude .gptignore file by default
+    find_params+=('!' '-name' ".gptignore")
+    echo "Adding .gptignore files in directory to exclude (by default): '.gptignore'"
+    
+    # Exclude the output file from the search
+    find_params+=('!' '-name' "$(basename "$OUTFILE")")
 
     echo "Processing directory: $current_dir"
 
