@@ -22,8 +22,12 @@ To use this script, you will need:
 
 ## Installation
 
-1. Download the script `consolidate_files.sh` and `CoT_prompt` or simply clone the repo `git clone https://github.com/dpuertamartos/gpt_context_provider.git` .
-2. You might need to make the script executable:
+1. Download the script `consolidate_files.sh` and `CoT_prompt.txt`, or clone the repository:
+   ```bash
+   git clone https://github.com/dpuertamartos/gpt_context_provider.git
+   ```
+
+2. Make the script executable:
    ```bash
    sudo chmod +x consolidate_files.sh
    ```
@@ -93,3 +97,29 @@ This will ignore:
 
 - The script handles plain text files. Binary files or files with special characters in their names may not be processed correctly.
 - The `CoT_prompt.txt` must be placed in the same directory as `consolidate_files.sh` for the `-m think` mode to work.
+
+
+## Setting up the test suite of this repo
+
+This project uses [BATS](https://github.com/bats-core/bats-core) to run the test suite. You need to install the dependencies via git submodules.
+
+1. Initialize and update the submodules:
+   ```bash
+   git submodule init
+   git submodule update
+   ```
+
+2. Install the necessary dependencies for BATS:
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+3. Ensure the test files have execution permission:
+   ```bash
+   chmod +x test/bats/bin/bats
+   ```
+
+4. Run the tests:
+   ```bash
+   ./test/bats/bin/bats test.bats
+   ```
