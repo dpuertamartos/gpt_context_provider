@@ -5,45 +5,51 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROMPT_FILE="$SCRIPT_DIR/CoT_prompt.txt"
 
 # Check if the correct number of arguments was provided
-if [ "$#" -lt 1 ] || [ "$#" -gt 4 ]; then
-    echo "Usage: $0 <directory_to_explore> [-m think] [output_file]"
-    exit 1
-fi
-
-# Variables for directory, optional mode, and output file
-DIR="$1"
-
-# If no mode is provided, check for the output file in position 2, otherwise default
-if [ "$2" != "-m" ]; then
-    OUTFILE="${2:-gpt_context_output.txt}"
-else
-    OUTFILE="${4:-gpt_context_output.txt}"  # Output file provided as 4th argument if -m is present
-fi
-
-# Check if the second argument is '-m' and the mode is 'think'
-if [ "$2" == "-m" ]; then
-    if [ "$3" != "think" ]; then
-        echo "Error: Mode '$3' does not exist. Only 'think' mode is supported."
+check_arguments() {
+    if [ "$#" -lt 1 ] || [ "$#" -gt 4 ]; then
+        echo "Usage: $0 <directory_to_explore> [-m think] [output_file]"
         exit 1
     fi
-fi
+}
 
-# Check if the directory exists
-if [ ! -d "$DIR" ]; then
-    echo "The directory $DIR does not exist."
-    exit 1
-fi
+# Parse arguments and set variables
+parse_arguments() {
+    DIR="$1"
 
-# Creating/Clearing the output file
-> "$OUTFILE"
+    # If no mode is provided, check for the output file in position 2, otherwise default
+    if [ "$2" != "-m" ]; then
+        OUTFILE="${2:-gpt_context_output.txt}"
+    else
+        OUTFILE="${4:-gpt_context_output.txt}"  # Output file provided as 4th argument if -m is present
+    fi
+
+    # Check if the second argument is '-m' and the mode is 'think'
+    if [ "$2" == "-m" ]; then
+        if [ "$3" != "think" ]; then
+            echo "Error: Mode '$3' does not exist. Only 'think' mode is supported."
+            exit 1
+        fi
+    fi
+}
+
+check_directory() {
+    if [ ! -d "$DIR" ]; then
+        echo "The directory $DIR does not exist."
+        exit 1
+    fi
+}
+
+initialize_output_file() {
+    > "$OUTFILE"
+}
 
 # Function to append file content with header
 append_file_content() {
     local file="$1"
-    echo "###%START_CONTENT PATH $file" >> "$OUTFILE" # Append the file path as a comment
-    cat "$file" >> "$OUTFILE"   # Append the file content
+    echo "###%START_CONTENT PATH $file" >> "$OUTFILE" 
+    cat "$file" >> "$OUTFILE"   
     echo "###%END_CONTENT PATH $file" >> "$OUTFILE"
-    echo "" >> "$OUTFILE"    # Append a newline for separation
+    echo "" >> "$OUTFILE"    
 }
 
 # Export the function so it can be used by child processes
@@ -62,18 +68,7 @@ insert_prompt_content() {
     fi
 }
 
-echo "### Description of PROBLEM TO SOLVE:" >> "$OUTFILE"
-echo "{}" >> "$OUTFILE"
-
-# Insert the CoT prompt content if the -m think option was provided
-if [ "$2" == "-m" ] && [ "$3" == "think" ]; then
-    insert_prompt_content
-fi
-
-echo "###------ End of instructions. NOW CODE CONTEXT WILL BE PROVIDED. FULLY UNDERSTAND IT BEFORE STARTING YOUR THINKING ------###" >> "$OUTFILE"
-
-
-# Function to process .gitignore and .gptignore files
+# Process .gitignore and .gptignore files
 process_ignore_file() {
     local ignore_file="$1"
     local current_dir="$2"
@@ -84,7 +79,6 @@ process_ignore_file() {
         while IFS='' read -r line || [[ -n "$line" ]]; do
             line=$(echo "$line" | tr -d '\r')  # Remove Windows carriage returns if any
             [[ "$line" = "" || "$line" =~ ^#.*$ ]] && continue
-            echo "Reading line from $ignore_file: '$line'"
             
             if [[ -d "$current_dir/$line" || "$line" == */ ]]; then
                 find_params_ref+=('!' '-path' "$current_dir/${line%/}/*" '-prune')
@@ -100,7 +94,6 @@ process_ignore_file() {
     fi
 }
 
-# Recursive function to process directories
 process_directory() {
     local current_dir="$1"
     local find_params=()
@@ -113,12 +106,27 @@ process_directory() {
     echo "Processing directory: $current_dir"
     process_ignore_file "$current_dir/.gitignore" "$current_dir" find_params
     process_ignore_file "$current_dir/.gptignore" "$current_dir" find_params
-
-    echo "find command: find $current_dir ${find_params[@]}"
     find "$current_dir" "${find_params[@]}" -exec bash -c 'append_file_content "$0"' {} \;
 }
 
-# Process the directory
-process_directory "$DIR"
+main() {
+    check_arguments "$@"
+    parse_arguments "$@"
+    check_directory
+    initialize_output_file
 
-echo "All files have been processed into $OUTFILE."
+    echo "### Description of PROBLEM TO SOLVE:" >> "$OUTFILE"
+    echo "{}" >> "$OUTFILE"
+
+    if [ "$2" == "-m" ] && [ "$3" == "think" ]; then
+        insert_prompt_content
+    fi
+
+    echo "###------ End of instructions. NOW CODE CONTEXT WILL BE PROVIDED. FULLY UNDERSTAND IT BEFORE STARTING YOUR THINKING ------###" >> "$OUTFILE"
+
+    process_directory "$DIR"
+    echo "All files have been processed into $OUTFILE."
+}
+
+# Execute the main function with arguments
+main "$@"
