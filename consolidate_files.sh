@@ -12,13 +12,17 @@ fi
 
 # Variables for directory, optional mode, and output file
 DIR="$1"
-OUTFILE="${3:-gpt_context_output.txt}"  # Default output file name if not provided
+
+# If no mode is provided, check for the output file in position 2, otherwise default
+if [ "$2" != "-m" ]; then
+    OUTFILE="${2:-gpt_context_output.txt}"
+else
+    OUTFILE="${4:-gpt_context_output.txt}"  # Output file provided as 4th argument if -m is present
+fi
 
 # Check if the second argument is '-m' and the mode is 'think'
 if [ "$2" == "-m" ]; then
-    if [ "$3" == "think" ]; then
-        OUTFILE="${4:-gpt_context_output.txt}"  # Update OUTFILE if provided as 4th argument
-    else
+    if [ "$3" != "think" ]; then
         echo "Error: Mode '$3' does not exist. Only 'think' mode is supported."
         exit 1
     fi
