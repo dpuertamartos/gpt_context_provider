@@ -1,14 +1,28 @@
 #!/bin/bash
 
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROMPT_FILE="$SCRIPT_DIR/CoT_prompt.txt"
+
 # Check if the correct number of arguments was provided
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-    echo "Usage: $0 <directory_to_explore> [output_file]"
+if [ "$#" -lt 1 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 <directory_to_explore> [-m think] [output_file]"
     exit 1
 fi
 
-# Variables for directory and output file
+# Variables for directory, optional mode, and output file
 DIR="$1"
-OUTFILE="${2:-gpt_context_output.txt}"  # Default output file name if not provided
+OUTFILE="${3:-gpt_context_output.txt}"  # Default output file name if not provided
+
+# Check if the second argument is '-m' and the mode is 'think'
+if [ "$2" == "-m" ]; then
+    if [ "$3" == "think" ]; then
+        OUTFILE="${4:-gpt_context_output.txt}"  # Update OUTFILE if provided as 4th argument
+    else
+        echo "Error: Mode '$3' does not exist. Only 'think' mode is supported."
+        exit 1
+    fi
+fi
 
 # Check if the directory exists
 if [ ! -d "$DIR" ]; then
@@ -32,6 +46,29 @@ append_file_content() {
 export -f append_file_content
 export OUTFILE
 
+# Function to insert CoT_prompt.txt content if mode is 'think'
+insert_prompt_content() {
+    if [ -f "$PROMPT_FILE" ]; then
+        echo "###------ Follow these instructions to solve the PROBLEM, this is crucial: " >> "$OUTFILE"
+        cat "$PROMPT_FILE" >> "$OUTFILE"
+        echo "" >> "$OUTFILE"
+    else
+        echo "Error: CoT_prompt.txt file not found in the script's directory ($SCRIPT_DIR)."
+        exit 1
+    fi
+}
+
+echo "### Description of PROBLEM TO SOLVE:" >> "$OUTFILE"
+echo "{}" >> "$OUTFILE"
+
+# Insert the CoT prompt content if the -m think option was provided
+if [ "$2" == "-m" ] && [ "$3" == "think" ]; then
+    insert_prompt_content
+fi
+
+echo "###------ End of instructions. NOW CODE CONTEXT WILL BE PROVIDED. FULLY UNDERSTAND IT BEFORE STARTING YOUR THINKING ------###" >> "$OUTFILE"
+
+
 # Function to process .gitignore and .gptignore files
 process_ignore_file() {
     local ignore_file="$1"
@@ -45,17 +82,13 @@ process_ignore_file() {
             [[ "$line" = "" || "$line" =~ ^#.*$ ]] && continue
             echo "Reading line from $ignore_file: '$line'"
             
-            # Check if the pattern is a directory, a file, or a global pattern
             if [[ -d "$current_dir/$line" || "$line" == */ ]]; then
-                # Treat as a directory and exclude its contents recursively
                 find_params_ref+=('!' '-path' "$current_dir/${line%/}/*" '-prune')
                 echo "Adding directory to exclude: '$current_dir/${line%/}/*'"
             elif [[ "$line" == */* ]]; then
-                # Treat as a specific file or pattern with path
                 find_params_ref+=('!' '-path' "$current_dir/$line")
                 echo "Adding file to exclude: '$current_dir/$line'"
             else
-                # Treat as a global pattern that applies to all subdirectories
                 find_params_ref+=('!' '-name' "$line")
                 echo "Adding global pattern to exclude: '$line'"
             fi
@@ -66,34 +99,18 @@ process_ignore_file() {
 # Recursive function to process directories
 process_directory() {
     local current_dir="$1"
-    local find_params=() # Initialize find parameters
+    local find_params=()
 
-    # Add default parameter to find files
     find_params+=('-type' 'f')
-
-    # Exclude .git folder by default
     find_params+=('!' '-path' "$current_dir/.git/*" '-prune')
-    echo "Adding .git directory to exclude (by default): '$current_dir/.git/*'"
-
-    # Exclude .gptignore file by default
     find_params+=('!' '-name' ".gptignore")
-    echo "Adding .gptignore files in directory to exclude (by default): '.gptignore'"
-    
-    # Exclude the output file from the search
     find_params+=('!' '-name' "$(basename "$OUTFILE")")
 
     echo "Processing directory: $current_dir"
-
-    # Handle .gitignore if it exists in the current directory
     process_ignore_file "$current_dir/.gitignore" "$current_dir" find_params
-
-    # Handle .gptignore if it exists in the current directory
     process_ignore_file "$current_dir/.gptignore" "$current_dir" find_params
 
-    # Display the find command to be executed
     echo "find command: find $current_dir ${find_params[@]}"
-    
-    # Execute find, excluding specified patterns and directories
     find "$current_dir" "${find_params[@]}" -exec bash -c 'append_file_content "$0"' {} \;
 }
 
