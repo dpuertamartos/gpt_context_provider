@@ -1,26 +1,95 @@
-
-# File Consolidation Script
+# File Consolidation Script to provide context to LLMs
 
 This Bash script recursively explores a specified directory, appending the contents of all files found within that directory and its subdirectories into a single text file. Each file's path and name is included in the output as a comment line, followed by the actual contents of the file.
 
-The main utility of this file is to give full context of your project to a Large Language Model, such as GPT.
+The main utility of this file is to give full context of your project to a Large Language Model, such as GPT, Claude, Bard, or others.
 
 ## Features
 
 - **Recursive File Processing**: The script searches through all subdirectories of the specified directory, processing all files.
 - **Flexible Output Filename**: If only the directory path is provided when running the script, the output file will automatically be named `gpt_context_output.txt`. If an output file name is provided, the script will use that instead.
 - **Ability to Ignore Files**: The script ignores the folders and files listed in **.gitignore** and **.gptignore** files.
-- **Optional Mode with `-m think`**: If the `-m think` option is provided, the script will insert the content of a predefined file `CoT_prompt.txt` located in the same directory as the script (`consolidate_files.sh`) before processing the files in the specified directory. If any other mode is provided with `-m`, the script will show an error message indicating that the mode is not supported.
+- **Optional Mode with `-m think`**: If the `-m think` option is provided, the script will insert the content of a predefined file `CoT_prompt.txt` located in the same directory as the script (`consolidate_files.sh`) before processing the files in the specified directory. If any other mode is provided with `-m`, the script will show an error message indicating that the mode is not supported. Feel free to change the con
 
 ## Prerequisites
 
 To use this script, you will need:
 
+- Docker
+
+Make sure you have Docker installed. You can download it from [Docker's official site](https://www.docker.com/).
+
+Or:
+
 - Bash shell
 - Basic command-line utilities (find, cat, echo)
-- A Unix-like environment is recommended (Linux, WSL, macOS)
 
-## Installation
+## Running the Script with Docker
+
+To avoid having to set up the environment manually, you can use Docker to run the script. This is especially useful in non-Linux environments (like Windows). 
+
+**You will be able to run all the functionalities without installing anything (apart from Docker) and with single line commands**.
+
+
+### Pulling and Running the Docker Container
+
+You can run the Docker container by mounting any local directory that you want to process to `/context` inside the container and running the script. This will automatically pull the docker image from the public Docker registry:
+
+```bash
+docker run --rm -v {/directory/to/process}:/context dpuertamartos/gpt_context_provider /context -m think output.txt
+```
+
+- `-v {/directory/to/process}:/context`: Mounts directory to `/context` in the container. 
+
+Replace the `{/directory/to/process}`. 
+Provide the directory as absolute path or use `.`, `${pwd}` (windows powershell), `$(pwd)` (bash). Take into account that the output `.txt` will be produced in the directory processed.
+
+- `/context`: **Do not change it**. The directory to be processed inside the container. 
+- `-m think`: **Optional** Runs the script in "think" mode, which adds the `CoT_prompt.txt` to the output.
+- `output.txt`: **Optional** The custom file where the consolidated output will be written.
+
+### Example single line commands
+
+In this examples we will asume we are in the directory to be processed and use `.` to point our current directory.
+
+1. **Default run**:
+   ```bash
+   docker run --rm -v .:/context dpuertamartos/gpt_context_provider /context
+   ```
+
+2. **Run with custom output**:
+   ```bash
+   docker run --rm -v .:/context dpuertamartos/gpt_context_provider /context output.txt
+   ```
+
+3. **Run in "think" mode and process uurrent directory**:
+   ```bash
+   docker run --rm -v .:/context dpuertamartos/gpt_context_provider /context -m think 
+   ```
+
+4. **Run in "think" mode and custom output**:
+   ```bash
+   docker run --rm -v .:/context dpuertamartos/gpt_context_provider /context -m think output.txt
+   ```
+
+### **Optional** Build your own Docker Image
+
+
+Once Docker is installed, you need to build the Docker image for the script:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/dpuertamartos/gpt_context_provider.git
+   ```
+
+2. Build the docker image
+   ```bash
+   docker build -t gpt_context_provider .
+   ```
+
+This will build an image named `gpt_context_provider`.
+
+## Installation without docker (BASH required)
 
 1. Download the script `consolidate_files.sh` and `CoT_prompt.txt`, or clone the repository:
    ```bash
@@ -32,11 +101,11 @@ To use this script, you will need:
    sudo chmod +x consolidate_files.sh
    ```
 
-## Usage
+### Usage
 
 To run the script, you can use the following commands:
 
-### Without the `-m` option:
+1. Without the `-m` option:
 ```bash
 ./consolidate_files.sh /path/to/directory output.txt
 ```
@@ -47,7 +116,7 @@ This command specifies both the directory to explore and the name of the output 
 ```
 If the output filename is not provided, the script will name the output file `gpt_context_output.txt`.
 
-### With the `-m think` option:
+2. With the `-m think` option:
 ```bash
 ./consolidate_files.sh /path/to/directory -m think output.txt
 ```
@@ -58,7 +127,7 @@ This command will insert the content of `CoT_prompt.txt` from the same directory
 ```
 This command will insert the content of `CoT_prompt.txt` from the same directory as the script into the default output file  `gpt_context_output.txt` before processing the contents of the specified directory.
 
-### Error Handling for Invalid Modes:
+## Error Handling for Invalid Modes:
 If an unsupported mode is provided with the `-m` option, the script will raise an error:
 ```bash
 ./consolidate_files.sh /path/to/directory -m unsupported_mode
