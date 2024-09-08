@@ -4,14 +4,29 @@ This Bash script recursively explores a specified directory, appending the conte
 
 The main utility of this file is to give full context of your project to a Large Language Model, such as GPT, Claude, Bard, or others.
 
-## Features
+## 0. Index
+1. [Features](#1-features)
+2. [Prerequisites](#2-prerequisites)
+3. [Running the Script with Docker](#3-running-the-script-with-docker)
+   - [3.1. Pulling and Running the Docker Container](#31-pulling-and-running-the-docker-container)
+   - [3.2. Example Single Line Commands](#32-example-single-line-commands)
+   - [3.3. Build Your Own Docker Image](#33-build-your-own-docker-image)
+4. [Installation Without Docker](#4-installation-without-docker)
+   - [4.1. Usage Without Docker](#41-usage-without-docker)
+5. [Error Handling](#5-error-handling)
+6. [Excluding Files from Output](#6-excluding-files-from-output)
+   - [6.1 Example of `.gptignore` or `.gitignore`](#61-example-of-gptignore-or-gitignore)
+7. [Notes](#7-notes)
+8. [Setting Up the Test Suite](#8-setting-up-the-test-suite)
+
+## 1. Features
 
 - **Recursive File Processing**: The script searches through all subdirectories of the specified directory, processing all files.
 - **Flexible Output Filename**: If only the directory path is provided when running the script, the output file will automatically be named `gpt_context_output.txt`. If an output file name is provided, the script will use that instead.
 - **Ability to Ignore Files**: The script ignores the folders and files listed in **.gitignore** and **.gptignore** files.
 - **Optional Mode with `-m think`**: If the `-m think` option is provided, the script will insert the content of a predefined file `CoT_prompt.txt` located in the same directory as the script (`consolidate_files.sh`) before processing the files in the specified directory. If any other mode is provided with `-m`, the script will show an error message indicating that the mode is not supported. Feel free to change the con
 
-## Prerequisites
+## 2. Prerequisites
 
 To use this script, you will need:
 
@@ -24,14 +39,14 @@ Or:
 - Bash shell
 - Basic command-line utilities (find, cat, echo)
 
-## Running the Script with Docker
+## 3. Running the Script with Docker
 
 To avoid having to set up the environment manually, you can use Docker to run the script. This is especially useful in non-Linux environments (like Windows). 
 
 **You will be able to run all the functionalities without installing anything (apart from Docker) and with single line commands**.
 
 
-### Pulling and Running the Docker Container
+### 3.1. Pulling and Running the Docker Container
 
 You can run the Docker container by mounting any local directory that you want to process to `/context` inside the container and running the script. This will automatically pull the docker image from the public Docker registry:
 
@@ -48,7 +63,7 @@ Provide the directory as absolute path or use `.`, `${pwd}` (windows powershell)
 - `-m think`: **Optional** Runs the script in "think" mode, which adds the `CoT_prompt.txt` to the output.
 - `output.txt`: **Optional** The custom file where the consolidated output will be written.
 
-### Example single line commands
+### 3.2. Example single line commands
 
 In this examples we will asume we are in the directory to be processed and use `.` to point our current directory.
 
@@ -72,8 +87,9 @@ In this examples we will asume we are in the directory to be processed and use `
    docker run --rm -v .:/context dpuertamartos/gpt_context_provider /context -m think output.txt
    ```
 
-### **Optional** Build your own Docker Image
+### 3.3. Build your own Docker Image
 
+**Optional**
 
 Once Docker is installed, you need to build the Docker image for the script:
 
@@ -89,7 +105,7 @@ Once Docker is installed, you need to build the Docker image for the script:
 
 This will build an image named `gpt_context_provider`.
 
-## Installation without docker (BASH required)
+## 4. Installation without docker (BASH required)
 
 1. Download the script `consolidate_files.sh` and `CoT_prompt.txt`, or clone the repository:
    ```bash
@@ -101,7 +117,7 @@ This will build an image named `gpt_context_provider`.
    sudo chmod +x consolidate_files.sh
    ```
 
-### Usage
+### 4.1. Usage without docker
 
 To run the script, you can use the following commands:
 
@@ -127,7 +143,8 @@ This command will insert the content of `CoT_prompt.txt` from the same directory
 ```
 This command will insert the content of `CoT_prompt.txt` from the same directory as the script into the default output file  `gpt_context_output.txt` before processing the contents of the specified directory.
 
-## Error Handling for Invalid Modes:
+## 5. Error Handling:
+
 If an unsupported mode is provided with the `-m` option, the script will raise an error:
 ```bash
 ./consolidate_files.sh /path/to/directory -m unsupported_mode
@@ -137,11 +154,11 @@ Output:
 Error: Mode 'unsupported_mode' does not exist. Only 'think' mode is supported.
 ```
 
-## How to Exclude Files from Being Added to Output
+## 6. Excluding Files from Output
 
 Create a file as `path/to/directory/.gptignore` with the files or folders you don't want to add to the output file. The `.gitignore` is also taken into account in the same way.
 
-### Example of `.gptignore` or `.gitignore`
+### 6.1 Example of `.gptignore` or `.gitignore`
 
 ```bash
 folder/file_to_ignore.py
@@ -162,13 +179,13 @@ This will ignore:
   1. It will ignore only that specific file if a `/` is present in the name, for example `folder/file_to_ignore.py`.
   2. It will ignore that file name everywhere if no `/` is present, for example `__pycache__`.
 
-## Notes
+## 7. Notes
 
 - The script handles plain text files. Binary files or files with special characters in their names may not be processed correctly.
 - The `CoT_prompt.txt` must be placed in the same directory as `consolidate_files.sh` for the `-m think` mode to work.
 
 
-## Setting up the test suite of this repo
+## 8. Setting up the test suite
 
 This project uses [BATS](https://github.com/bats-core/bats-core) to run the test suite. You need to install the dependencies via git submodules.
 
